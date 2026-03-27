@@ -1,0 +1,534 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no">
+<title>Jellybet — Live Sports Prediction Markets</title>
+<meta name="description" content="Jellybet API Demo — Live Polymarket Sports Data">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>⚡</text></svg>">
+<script src="https://unpkg.com/react@18/umd/react.production.min.js" crossorigin></script>
+<script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js" crossorigin></script>
+<script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+</head>
+<body>
+<div id="root"></div>
+<script type="text/babel" data-type="module">
+const {useState, useEffect, useCallback, useMemo} = React;
+
+
+// ═══════════════════════════════════════
+// Config
+// ═══════════════════════════════════════
+const API = "https://jellybetapi-production.up.railway.app";
+
+// ═══════════════════════════════════════
+// i18n
+// ═══════════════════════════════════════
+const T = {
+  zh: {
+    nav: { markets:"市场", leverage:"杠杆", positions:"持仓", me:"我的" },
+    mode: { fast:"闪电", pro:"专业" },
+    markets: { title:"体育预测市场", subtitle:"真实 Polymarket 数据 · 实时价格", search:"搜索球队...", all:"全部", football:"⚽ 足球", nba:"🏀 NBA", f1:"🏎 F1", vol:"交易量", today:"今天", tomorrow:"明天", dayAfter:"后天", vs:"vs", win:"胜", matchCount:"个市场", live:"进行中", upcoming:"未开始", hot:"热门", back:"← 返回", favOn:"取消收藏筛选", favOff:"只看收藏", loading:"加载中...", error:"加载失败，点击重试", noData:"暂无市场数据", yes:"YES", no:"NO" },
+    trade: { buy:"买入", sell:"卖出", size:"金额 (USDC)", getQuote:"获取报价", submit:"提交订单", expires:"报价有效期", mktPrice:"市场价", quotedPrice:"报价", fee:"服务费", fok:"FOK 立即成交", gtc:"GTC 限价挂单", limitPrice:"限价", bestBid:"最优买价", bestAsk:"最优卖价", spread:"价差", mid:"中间价", bidVol:"买量(份)", price:"价格", askVol:"卖量(份)", success:"订单提交成功！", shares:"份", unitPrice:"报价单价", estPayout:"预计回报", estProfit:"预计利润", total:"总花费", instant:"即时成交 (FOK)", confirm:"确认并支付", outcome:"方向", cancel:"取消", again:"继续交易", selected:"已选", prob:"胜率", homeWin:"主胜", awayWin:"客胜", demoOnly:"仅供展示", obError:"订单簿暂不可用" },
+    lev: { title:"杠杆交易", subtitle:"固定3倍杠杆 · 仅限买入", leverage:"杠杆倍数", margin:"所需保证金", funding:"借入金额", nominal:"名义金额", liqPrice:"强平价格", open:"开仓 (3X 杠杆)", warning:"杠杆交易有重大风险。当价格跌破强平阈值时，仓位将被自动平仓。", success:"杠杆仓位已开仓！" },
+    pos: { title:"持仓管理", pending:"挂单中", active:"活跃", leveraged:"杠杆", settled:"已结算", none:"暂无记录", entry:"入场价", current:"当前价", pnl:"盈亏", limitPrice:"限价", cancelOrder:"撤单", waiting:"等待成交" },
+    me: { title:"我的", balance:"账户余额", deposit:"充值", withdraw:"提现", history:"交易记录", histSub:"连接真实 API 后显示", settings:"设置", lang:"语言切换", about:"关于 Jellybet", version:"版本" },
+    common: { back:"返回", noMatch:"暂无比赛" },
+    live:"进行中"
+  },
+  en: {
+    nav: { markets:"Markets", leverage:"Leverage", positions:"Positions", me:"Me" },
+    mode: { fast:"Fast", pro:"Pro" },
+    markets: { title:"Sports Prediction Markets", subtitle:"Live Polymarket data · Real-time prices", search:"Search teams...", all:"All", football:"⚽ Football", nba:"🏀 NBA", f1:"🏎 F1", vol:"Volume", today:"Today", tomorrow:"Tomorrow", dayAfter:"Day After", vs:"vs", win:"Win", matchCount:"markets", live:"LIVE", upcoming:"Upcoming", hot:"Hot", back:"← Back", favOn:"Show all", favOff:"Favorites only", loading:"Loading...", error:"Failed to load. Tap to retry.", noData:"No market data", yes:"YES", no:"NO" },
+    trade: { buy:"BUY", sell:"SELL", size:"Size (USDC)", getQuote:"Get Quote", submit:"Submit Order", expires:"Quote expires in", mktPrice:"Market Price", quotedPrice:"Quoted Price", fee:"Service Fee", fok:"⚡ FOK", gtc:"📖 GTC", limitPrice:"Limit Price", bestBid:"Best Bid", bestAsk:"Best Ask", spread:"Spread", mid:"Mid", bidVol:"Bid Size", price:"Price", askVol:"Ask Size", success:"Order Submitted!", shares:"shares", unitPrice:"Quoted Price", estPayout:"Est. Payout", estProfit:"Est. Profit", total:"Total Cost", instant:"Instant Execution (FOK)", confirm:"Confirm & Pay", outcome:"Outcome", cancel:"Cancel", again:"Trade Again", selected:"Selected", prob:"win rate", homeWin:"Home Win", awayWin:"Away Win", demoOnly:"Demo Only", obError:"Orderbook unavailable" },
+    lev: { title:"Leverage Trading", subtitle:"3x Fixed Leverage · BUY Only", leverage:"Leverage", margin:"Required Margin", funding:"Borrowed", nominal:"Nominal Value", liqPrice:"Liquidation Price", open:"Open Position (3X)", warning:"Leverage trading carries significant risk. Positions will be liquidated if price drops below the liquidation threshold.", success:"Position opened!" },
+    pos: { title:"Positions", pending:"Pending", active:"Active", leveraged:"Leveraged", settled:"Settled", none:"No records", entry:"Entry", current:"Current", pnl:"P&L", limitPrice:"Limit Price", cancelOrder:"Cancel", waiting:"Waiting" },
+    me: { title:"Me", balance:"Account Balance", deposit:"Deposit", withdraw:"Withdraw", history:"Trade History", histSub:"Will show after connecting live API", settings:"Settings", lang:"Language", about:"About Jellybet", version:"Version" },
+    common: { back:"Back", noMatch:"No matches" },
+    live:"LIVE"
+  }
+};
+
+// ═══════════════════════════════════════
+// Helpers
+// ═══════════════════════════════════════
+const getTeam = (m, role) => m.teams?.find(t=>t.role===role) || m.teams?.[role==="home"?0:1] || {};
+const H = (m,lang) => { const t=getTeam(m,"home"); return lang==="zh"?(t.name_zh||t.name||"—"):t.name||"—"; };
+const A = (m,lang) => { const t=getTeam(m,"away"); return lang==="zh"?(t.name_zh||t.name||"—"):t.name||"—"; };
+const LG = (m,lang) => lang==="zh"?(m.league_name_zh||m.league_name||m.league||""):m.league_name||m.league||"";
+const hasTwoTeams = m => m.teams && m.teams.length >= 2;
+const Q = (m,lang) => lang==="zh"?(m.question_zh||m.question):m.question;
+const fmtVol = v => v>=1e6?`$${(v/1e6).toFixed(1)}M`:v>=1e3?`$${(v/1e3).toFixed(0)}K`:`$${v}`;
+
+// ═══════════════════════════════════════
+// Styles — identical to mock demo
+// ═══════════════════════════════════════
+const CSS = `
+@import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500;600;700&display=swap');
+*{margin:0;padding:0;box-sizing:border-box}
+:root{
+  --gold:#ffcc00;--gold-dim:rgba(255,204,0,.12);--gold-dark:#e6b800;
+  --bg:#0a0a0a;--bg1:#1a1a1a;--bg2:#262626;--bg3:#333;
+  --bdr:#444;--bdr-gold:3px solid var(--gold);
+  --g:#22c55e;--gd:rgba(34,197,94,.15);--g2:#4ade80;
+  --r:#e63b2e;--rd:rgba(230,59,46,.15);
+  --b:#0055ff;--bd:rgba(0,85,255,.15);
+  --p:#9c27b0;--pd:rgba(156,39,176,.15);
+  --t1:#f5f0e8;--t2:#a8a39b;--t3:#706b63;
+  --shadow:4px 4px 0px 0px var(--gold);
+  --shadow-sm:2px 2px 0px 0px var(--gold);
+}
+body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--t1);overflow-x:hidden}
+h1,h2,h3,.hd{font-family:'Space Grotesk',sans-serif}
+.mono{font-family:'JetBrains Mono',monospace}
+.app{max-width:430px;margin:0 auto;min-height:100vh;background:var(--bg);position:relative;padding-bottom:72px}
+.nav{display:flex;align-items:center;justify-content:space-between;padding:14px 16px;border-bottom:3px solid var(--gold)}
+.logo{font-family:'Space Grotesk',sans-serif;font-weight:700;font-size:22px;color:var(--gold);letter-spacing:-0.5px;display:flex;align-items:center;gap:6px}
+.bal{padding:6px 14px;border:2px solid var(--gold);font-family:'JetBrains Mono',monospace;font-size:13px;font-weight:600;color:var(--gold)}
+.live-badge{padding:3px 8px;background:var(--g);color:#fff;font-size:10px;font-weight:700;font-family:'Space Grotesk',sans-serif;letter-spacing:.5px;animation:livePulse 2s infinite}
+.mode-t{display:flex;border:3px solid var(--bdr);overflow:hidden}
+.mode-b{flex:1;padding:12px;text-align:center;font-family:'Space Grotesk',sans-serif;font-weight:600;font-size:14px;cursor:pointer;border:none;transition:all .15s;display:flex;align-items:center;justify-content:center;gap:6px}
+.mode-b.off{background:var(--bg1);color:var(--t3)}.mode-b.fast{background:var(--gold);color:var(--bg)}.mode-b.pro{background:var(--p);color:#fff}
+.tab-bar{position:fixed;bottom:0;left:50%;transform:translateX(-50%);width:100%;max-width:430px;display:flex;background:var(--bg1);border-top:3px solid var(--bdr);z-index:100;height:68px}
+.tab-item{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;cursor:pointer;font-size:11px;font-weight:600;color:var(--t3);transition:all .15s;border:none;background:none;font-family:'Space Grotesk',sans-serif}
+.tab-item.active{color:var(--gold);background:var(--gold-dim)}
+.tab-item svg{width:20px;height:20px}
+.page{padding:0 16px 20px;animation:fadeUp .3s ease}
+@keyframes fadeUp{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:translateY(0)}}
+@keyframes livePulse{0%,100%{opacity:1}50%{opacity:.6}}
+.page-hd{padding:20px 0 16px}.page-title{font-size:24px;font-weight:700;display:flex;align-items:center;gap:8px}.page-sub{font-size:13px;color:var(--t3);margin-top:2px}
+.card{background:var(--bg1);border:3px solid var(--bdr);padding:16px;margin-bottom:12px;transition:border-color .15s}.card:hover{border-color:var(--t3)}.card-neo{box-shadow:var(--shadow);border-color:var(--gold)}.card-sm{padding:12px}
+.badge{display:inline-block;padding:2px 8px;font-size:11px;font-weight:700;text-transform:uppercase;font-family:'Space Grotesk',sans-serif;letter-spacing:.5px}
+.badge-league{background:var(--bg2);color:var(--t2)}.badge-hot{background:var(--r);color:#fff;margin-left:4px}.badge-live{background:var(--gd);color:var(--g);border:1px solid var(--g)}
+.search{display:flex;align-items:center;gap:8px;padding:10px 14px;background:var(--bg1);border:3px solid var(--bdr);margin-bottom:14px}
+.search input{flex:1;background:none;border:none;outline:none;color:var(--t1);font-size:14px;font-family:inherit}.search input::placeholder{color:var(--t3)}
+.tabs{display:flex;gap:4px;margin-bottom:16px;overflow-x:auto;-webkit-overflow-scrolling:touch;scrollbar-width:none;padding-bottom:4px}.tabs::-webkit-scrollbar{display:none}
+.tab{padding:6px 14px;font-size:13px;font-weight:600;cursor:pointer;border:none;background:none;color:var(--t3);font-family:'Space Grotesk',sans-serif;border-bottom:2px solid transparent;transition:all .15s;white-space:nowrap;flex-shrink:0}
+.tab.a{color:var(--gold);border-bottom-color:var(--gold)}
+.tab-back{padding:6px 12px;font-size:13px;font-weight:600;cursor:pointer;border:none;background:none;color:var(--gold);font-family:'Space Grotesk',sans-serif;white-space:nowrap;flex-shrink:0}
+.match-card{background:var(--bg1);border:3px solid var(--bdr);padding:14px;margin-bottom:8px;cursor:pointer;transition:all .15s;position:relative}
+.match-card:hover{border-color:var(--t3)}.match-card.live-card{border-color:var(--g);border-left-width:5px}
+.match-time{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;font-size:12px}
+.match-time .time{font-family:'JetBrains Mono',monospace;color:var(--t2);font-weight:600}
+.match-time .live-tag{background:var(--g);color:#fff;padding:2px 8px;font-size:10px;font-weight:700;animation:livePulse 2s infinite}
+.match-teams{display:flex;align-items:center;justify-content:center;gap:12px;margin-bottom:12px}
+.match-team{flex:1;text-align:center;min-width:0;overflow:hidden}
+.match-team-name{font-family:'Space Grotesk',sans-serif;font-size:16px;font-weight:700;line-height:1.3;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.match-vs{font-size:13px;color:var(--t3);font-family:'JetBrains Mono',monospace;font-weight:700;flex-shrink:0}
+.match-odds{display:flex;gap:8px}
+.match-odds-btn{flex:1;padding:10px;text-align:center;border:2px solid;cursor:pointer;font-family:'JetBrains Mono',monospace;transition:all .12s}
+.match-odds-btn .odds-team{font-size:10px;font-weight:600;margin-bottom:3px;font-family:'Space Grotesk',sans-serif;text-transform:uppercase;letter-spacing:.3px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.match-odds-btn .odds-val{font-size:18px;font-weight:800}
+.mo-home{background:var(--gd);border-color:var(--g);color:var(--g)}.mo-home:hover{background:rgba(34,197,94,.25)}
+.mo-away{background:var(--rd);border-color:var(--r);color:var(--r)}.mo-away:hover{background:rgba(230,59,46,.25)}
+.mkt-q{font-family:'Space Grotesk',sans-serif;font-size:15px;font-weight:700;line-height:1.4;margin:8px 0}
+.odds-row{display:flex;gap:8px}.odds-btn{flex:1;padding:10px;text-align:center;font-family:'JetBrains Mono',monospace;font-size:15px;font-weight:700;border:2px solid;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;transition:all .15s}
+.odds-yes{background:var(--g);border-color:var(--g);color:#fff}.odds-no{background:var(--r);border-color:var(--r);color:#fff}
+.fav-star{background:none;border:none;cursor:pointer;font-size:16px;opacity:.4;transition:all .15s;padding:2px 0 2px 6px;flex-shrink:0}
+.fav-star:hover{opacity:.7}.fav-star.active{opacity:1;color:var(--gold)}
+.fav-filter{width:44px;height:100%;display:flex;align-items:center;justify-content:center;border:3px solid var(--bdr);background:var(--bg1);cursor:pointer;font-size:18px;transition:all .12s;flex-shrink:0}
+.fav-filter.on{border-color:var(--gold);background:var(--gold-dim)}
+.league-hd{display:flex;align-items:center;gap:8px;padding:10px 0 8px;font-family:'Space Grotesk',sans-serif;font-weight:700;font-size:14px;color:var(--t2);border-bottom:1px solid var(--bdr);margin-bottom:8px}
+.league-hd .cnt{font-size:12px;color:var(--t3);font-weight:500}
+.fo-row{display:flex;gap:10px;margin-bottom:14px}
+.fo{flex:1;padding:20px 10px;text-align:center;border:3px solid var(--bdr);cursor:pointer;transition:all .15s;position:relative}
+.fo.sel-y{border-color:var(--g);box-shadow:4px 4px 0 0 var(--g)}.fo.sel-n{border-color:var(--r);box-shadow:4px 4px 0 0 var(--r)}
+.fo-label{font-size:13px;font-weight:700;margin-bottom:4px;font-family:'Space Grotesk',sans-serif;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.fo-price{font-family:'JetBrains Mono',monospace;font-size:32px;font-weight:800}
+.fo-sub{font-size:11px;color:var(--t3);margin-top:2px;font-family:'JetBrains Mono',monospace}
+.fo .sel-tag{position:absolute;top:-10px;left:50%;transform:translateX(-50%);background:var(--bg);padding:1px 8px;font-size:10px;font-weight:700;border:2px solid var(--gold);color:var(--gold)}
+.amt-row{display:flex;gap:6px;margin-bottom:12px}
+.amt-btn{flex:1;padding:8px;text-align:center;background:var(--bg1);border:2px solid var(--bdr);font-family:'JetBrains Mono',monospace;font-size:13px;font-weight:600;color:var(--t2);cursor:pointer;transition:all .12s}
+.amt-btn.a{border-color:var(--gold);color:var(--gold);background:var(--gold-dim)}
+.inp-wrap{margin-bottom:12px}.inp-label{font-size:12px;color:var(--t2);margin-bottom:4px;display:flex;justify-content:space-between}
+.inp{width:100%;padding:12px;background:var(--bg);border:3px solid var(--bdr);color:var(--t1);font-family:'JetBrains Mono',monospace;font-size:16px;outline:none;transition:border-color .15s}.inp:focus{border-color:var(--gold)}.inp::placeholder{color:var(--t3)}
+.summary{background:var(--bg);border:3px solid var(--bdr);padding:14px;margin-bottom:14px}
+.sum-row{display:flex;justify-content:space-between;padding:5px 0;font-size:13px}.sum-row .l{color:var(--t3)}.sum-row .v{font-family:'JetBrains Mono',monospace;font-weight:600}
+.sum-total{border-top:2px solid var(--bdr);padding-top:10px;margin-top:6px;font-size:15px}
+.btn{width:100%;padding:14px;font-family:'Space Grotesk',sans-serif;font-size:15px;font-weight:700;cursor:pointer;border:3px solid;transition:all .15s;display:flex;align-items:center;justify-content:center;gap:6px}
+.btn:disabled{opacity:.35;cursor:not-allowed}
+.btn-gold{background:var(--gold);border-color:var(--gold);color:var(--bg)}.btn-green{background:var(--g);border-color:var(--g);color:#fff}.btn-red{background:var(--r);border-color:var(--r);color:#fff}
+.btn-out{background:transparent;border-color:var(--bdr);color:var(--t2)}
+.hint{font-size:11px;color:var(--t3);text-align:center;margin-top:8px;display:flex;align-items:center;justify-content:center;gap:4px}
+.quote-card{border:3px solid var(--gold);padding:14px;margin-bottom:12px;background:var(--bg)}
+.countdown{display:flex;align-items:center;justify-content:center;gap:6px;padding:8px;background:var(--rd);color:var(--r);font-family:'JetBrains Mono',monospace;font-size:13px;font-weight:700;margin-top:8px}
+.ob{background:var(--bg1);border:3px solid var(--bdr);padding:12px;margin-bottom:12px;overflow:hidden}
+.ob-hd{display:grid;grid-template-columns:1fr 80px 1fr;font-size:10px;color:var(--t3);text-transform:uppercase;font-weight:700;padding-bottom:6px;border-bottom:1px solid var(--bdr);margin-bottom:4px;letter-spacing:.5px;font-family:'Space Grotesk',sans-serif}
+.ob-row{display:grid;grid-template-columns:1fr 80px 1fr;font-family:'JetBrains Mono',monospace;font-size:12px;padding:2px 0;position:relative}
+.ob-bid{text-align:right;padding-right:8px;color:var(--g)}.ob-ask{text-align:left;padding-left:8px;color:var(--r)}
+.ob-p{text-align:center;font-weight:600}.ob-p.gp{color:var(--g)}.ob-p.rp{color:var(--r)}
+.ob-mid{text-align:center;padding:8px 0;font-family:'JetBrains Mono',monospace;font-size:12px;font-weight:700;color:var(--gold);border-top:2px solid var(--gold);border-bottom:2px solid var(--gold);margin:4px 0}
+.ob-bar{position:absolute;top:0;bottom:0;opacity:.1}.ob-bar-b{right:50%;background:var(--g)}.ob-bar-a{left:50%;background:var(--r)}
+.side-tog{display:flex;margin-bottom:14px;border:3px solid var(--bdr)}
+.side-b{flex:1;padding:10px;text-align:center;font-weight:700;font-size:14px;border:none;cursor:pointer;font-family:'Space Grotesk',sans-serif;background:var(--bg);color:var(--t3)}
+.side-b.ab{background:var(--g);color:#fff;border:2px solid var(--gold)}.side-b.as{background:var(--r);color:#fff}
+.stat-grid{display:grid;gap:8px;margin-bottom:12px}.stat-grid-3{grid-template-columns:1fr 1fr 1fr}.stat-grid-2{grid-template-columns:1fr 1fr}
+.stat-card{background:var(--bg);border:3px solid var(--bdr);padding:14px;text-align:center}
+.stat-label{font-size:10px;color:var(--t3);text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px;font-family:'Space Grotesk',sans-serif;font-weight:600}
+.stat-val{font-family:'JetBrains Mono',monospace;font-size:22px;font-weight:700}
+.warn{display:flex;gap:8px;padding:12px;border:2px solid var(--r);background:var(--rd);font-size:12px;color:var(--t2);line-height:1.5;margin:12px 0}
+.back{display:inline-flex;align-items:center;gap:4px;font-size:13px;color:var(--t3);cursor:pointer;border:none;background:none;font-family:inherit;padding:12px 0}.back:hover{color:var(--gold)}
+.pos-card{background:var(--bg1);border:3px solid var(--bdr);padding:14px;margin-bottom:8px}
+.pos-q{font-size:14px;font-weight:600;margin-bottom:6px;font-family:'Space Grotesk',sans-serif;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.pos-grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:4px;font-size:12px}
+.pos-grid .l{color:var(--t3);font-size:10px;text-transform:uppercase}.pos-grid .v{font-family:'JetBrains Mono',monospace;font-weight:600}
+.green{color:var(--g)}.red{color:var(--r)}.gold{color:var(--gold)}.blue{color:var(--b)}
+.loader{text-align:center;padding:40px;color:var(--t3)}
+.loader-spin{display:inline-block;width:24px;height:24px;border:3px solid var(--bdr);border-top-color:var(--gold);border-radius:50%;animation:spin .8s linear infinite;margin-bottom:8px}
+@keyframes spin{to{transform:rotate(360deg)}}
+select.inp{cursor:pointer;-webkit-appearance:none;appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' fill='%23a8a39b' viewBox='0 0 16 16'%3E%3Cpath d='M8 11L3 6h10z'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 12px center}
+.demo-banner{padding:8px 16px;background:var(--gold-dim);border-bottom:1px solid var(--gold);font-size:11px;color:var(--gold);text-align:center;font-family:'Space Grotesk',sans-serif;font-weight:600}
+`;
+
+// ═══════════════════════════════════════
+// Icons
+// ═══════════════════════════════════════
+const Icons = {
+  markets: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>,
+  leverage: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg>,
+  positions: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M9 21V9"/></svg>,
+  me: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>,
+  back: <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>,
+};
+
+const Loader = ({t}) => <div className="loader"><div className="loader-spin"/><div>{t.markets.loading}</div></div>;
+
+// ═══════════════════════════════════════
+// MARKETS PAGE — Real API
+// ═══════════════════════════════════════
+const MarketsPage = ({t,lang,onSelect}) => {
+  const [cats,setCats]=useState([]);
+  const [markets,setMarkets]=useState([]);
+  const [loading,setLoading]=useState(true);
+  const [error,setError]=useState(null);
+  const [topCat,setTopCat]=useState("all");
+  const [subCat,setSubCat]=useState("all");
+  const [q,setQ]=useState("");
+  const [favs,setFavs]=useState(new Set());
+  const [favOnly,setFavOnly]=useState(false);
+
+  // Fetch categories
+  useEffect(()=>{
+    fetch(`${API}/sports/categories?lang=${lang}`)
+      .then(r=>r.json())
+      .then(d=>setCats(d.data||[]))
+      .catch(()=>{});
+  },[lang]);
+
+  // Fetch markets
+  const fetchMarkets = useCallback(()=>{
+    setLoading(true);setError(null);
+    const params = new URLSearchParams({lang, limit:"50"});
+    if(topCat!=="all" && subCat==="all") params.set("sport", topCat==="football"?"soccer":topCat);
+    if(subCat!=="all") { params.set("sport","soccer"); params.set("league",subCat); }
+    fetch(`${API}/sports/markets?${params}`)
+      .then(r=>{if(!r.ok)throw new Error();return r.json()})
+      .then(d=>{setMarkets(d.data||[]);setLoading(false)})
+      .catch(()=>{setError(true);setLoading(false)});
+  },[lang,topCat,subCat]);
+
+  useEffect(()=>{fetchMarkets()},[fetchMarkets]);
+
+  const toggleFav = (e,id) => { e.stopPropagation(); setFavs(p=>{const n=new Set(p);n.has(id)?n.delete(id):n.add(id);return n}); };
+
+  // Build top tabs from categories
+  const topTabs = [{k:"all",l:t.markets.all}];
+  const footballCat = cats.find(c=>c.sport==="soccer");
+  if(footballCat) topTabs.push({k:"football",l:t.markets.football});
+  const nbaCat = cats.find(c=>c.sport==="nba");
+  if(nbaCat) topTabs.push({k:"nba",l:t.markets.nba});
+  // Add any other sports from API
+  cats.filter(c=>!["soccer","nba"].includes(c.sport)).forEach(c=>topTabs.push({k:c.sport,l:c.name}));
+
+  const inFootball = topCat==="football";
+  const subTabs = inFootball && footballCat ? [{k:"all",l:t.markets.all}, ...footballCat.leagues.map(lg=>({k:lg.code,l:lang==="zh"?lg.name_zh:lg.name}))] : [];
+
+  // Filter
+  const filtered = markets.filter(m=>{
+    if(favOnly && !favs.has(m.token_id)) return false;
+    const h=H(m,lang),a=A(m,lang),qn=Q(m,lang)||"";
+    if(q && !h.toLowerCase().includes(q.toLowerCase()) && !a.toLowerCase().includes(q.toLowerCase()) && !qn.toLowerCase().includes(q.toLowerCase())) return false;
+    return true;
+  });
+
+  // Group by league
+  const leagues={};
+  filtered.forEach(m=>{
+    const lk = LG(m,lang) || (lang==="zh"?"其他":"Other");
+    if(!leagues[lk]) leagues[lk]=[];
+    leagues[lk].push(m);
+  });
+
+  return <div className="page">
+    <div className="page-hd"><div className="page-title hd">{t.markets.title}</div><div className="page-sub">{t.markets.subtitle}</div></div>
+
+    <div className="search"><span style={{color:"var(--t3)"}}>🔍</span><input placeholder={t.markets.search} value={q} onChange={e=>setQ(e.target.value)}/></div>
+
+    {!inFootball ? (
+      <div className="tabs">{topTabs.map(c=><button key={c.k} className={`tab ${topCat===c.k?"a":""}`} onClick={()=>{setTopCat(c.k);setSubCat("all")}}>{c.l}</button>)}</div>
+    ) : (
+      <div className="tabs"><button className="tab-back" onClick={()=>{setTopCat("all");setSubCat("all")}}>{t.markets.back}</button>
+        {subTabs.map(c=><button key={c.k} className={`tab ${subCat===c.k?"a":""}`} onClick={()=>setSubCat(c.k)}>{c.l}</button>)}
+      </div>
+    )}
+
+    {loading && <Loader t={t}/>}
+    {error && <div className="loader" style={{cursor:"pointer"}} onClick={fetchMarkets}><div style={{fontSize:32,marginBottom:8}}>⚠️</div>{t.markets.error}</div>}
+
+    {!loading && !error && <>
+      <div style={{fontSize:12,color:"var(--t3)",marginBottom:12,fontFamily:"'JetBrains Mono',monospace"}}>{filtered.length} {t.markets.matchCount}{favOnly?" ⭐":""}</div>
+
+      {Object.keys(leagues).length===0 && <div className="loader"><div style={{fontSize:32,marginBottom:8}}>📭</div>{t.markets.noData}</div>}
+
+      {Object.entries(leagues).map(([league,ms])=><div key={league}>
+        <div className="league-hd"><span>{league}</span><span className="cnt">{ms.length}</span></div>
+        {ms.map(m=>{
+          const twoTeams = hasTwoTeams(m);
+          return <div key={m.token_id} className={`match-card ${m.match_status==="live"?"live-card":""}`} onClick={()=>onSelect(m)}>
+            <div className="match-time">
+              <span className="time">{m.league ? <span className="badge badge-league">{LG(m,lang)}</span> : null}</span>
+              <div style={{display:"flex",gap:6,alignItems:"center"}}>
+                {m.volume>500000&&<span className="badge badge-hot">{t.markets.hot}</span>}
+                {m.match_status==="live"&&<span className="live-tag">● {t.markets.live}</span>}
+                <span style={{fontSize:11,color:"var(--t3)",fontFamily:"'JetBrains Mono',monospace"}}>{fmtVol(m.volume||0)}</span>
+                <button className={`fav-star ${favs.has(m.token_id)?"active":""}`} onClick={e=>toggleFav(e,m.token_id)}>{favs.has(m.token_id)?"⭐":"☆"}</button>
+              </div>
+            </div>
+
+            {twoTeams ? <>
+              <div className="match-teams">
+                <div className="match-team"><div className="match-team-name">{H(m,lang)}</div></div>
+                <div className="match-vs">{t.markets.vs}</div>
+                <div className="match-team"><div className="match-team-name">{A(m,lang)}</div></div>
+              </div>
+              <div className="match-odds">
+                <button className="match-odds-btn mo-home" onClick={e=>{e.stopPropagation();onSelect(m)}}>
+                  <div className="odds-team">{H(m,lang)} {t.markets.win}</div>
+                  <div className="odds-val">{((m.current_yes_price||0)*100).toFixed(0)}¢</div>
+                </button>
+                <button className="match-odds-btn mo-away" onClick={e=>{e.stopPropagation();onSelect(m)}}>
+                  <div className="odds-team">{A(m,lang)} {t.markets.win}</div>
+                  <div className="odds-val">{((m.current_no_price||0)*100).toFixed(0)}¢</div>
+                </button>
+              </div>
+            </> : <>
+              <div className="mkt-q">{Q(m,lang)}</div>
+              <div className="odds-row">
+                <button className="odds-btn odds-yes" onClick={e=>{e.stopPropagation();onSelect(m)}}>{t.markets.yes} {((m.current_yes_price||0)*100).toFixed(0)}¢</button>
+                <button className="odds-btn odds-no" onClick={e=>{e.stopPropagation();onSelect(m)}}>{t.markets.no} {((m.current_no_price||0)*100).toFixed(0)}¢</button>
+              </div>
+            </>}
+          </div>;
+        })}
+      </div>)}
+    </>}
+  </div>;
+};
+
+// ═══════════════════════════════════════
+// TRADE PAGE — Real orderbook + demo-only submit
+// ═══════════════════════════════════════
+const TradePage = ({t,lang,market,mode,setMode,onBack}) => {
+  const [ob,setOb]=useState(null);
+  const [obErr,setObErr]=useState(false);
+  const [oc,setOc]=useState("YES");
+  const [sz,setSz]=useState("50");
+  const presets=[10,25,50,100,250];
+  const twoTeams = hasTwoTeams(market);
+
+  const yp = market.current_yes_price||0;
+  const np = market.current_no_price||0;
+  const pr = oc==="YES"?yp:np;
+  const shares = pr>0 && +sz>0 ? Math.floor(+sz/pr) : 0;
+  const cost = +(shares*pr).toFixed(2);
+  const profit = +(shares-cost).toFixed(2);
+  const teamName = twoTeams ? (oc==="YES"?H(market,lang):A(market,lang)) : (oc==="YES"?t.markets.yes:t.markets.no);
+
+  // Fetch orderbook
+  useEffect(()=>{
+    if(!market.token_id) return;
+    setObErr(false);
+    fetch(`${API}/orderbook?market_id=${market.token_id}&lang=${lang}`)
+      .then(r=>{if(!r.ok)throw new Error();return r.json()})
+      .then(d=>setOb(d))
+      .catch(()=>setObErr(true));
+  },[market.token_id,lang]);
+
+  const maxS = ob ? Math.max(...(ob.bids||[]).slice(0,5).map(x=>x.size),...(ob.asks||[]).slice(0,5).map(x=>x.size),1) : 1;
+
+  return <div className="page">
+    <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:4}}>
+      <button className="back" onClick={onBack} style={{padding:"8px 0"}}>{Icons.back} {t.common.back}</button>
+      <div className="mode-t" style={{width:"auto",display:"inline-flex",border:"2px solid var(--bdr)"}}>
+        <button className={`mode-b ${mode==="fast"?"fast":"off"}`} style={{padding:"6px 14px",fontSize:12}} onClick={()=>setMode("fast")}>⚡ {t.mode.fast}</button>
+        <button className={`mode-b ${mode==="pro"?"pro":"off"}`} style={{padding:"6px 14px",fontSize:12}} onClick={()=>setMode("pro")}>🎛 {t.mode.pro}</button>
+      </div>
+    </div>
+
+    {/* Market header */}
+    <div className="card card-neo card-sm" style={{marginBottom:14}}>
+      {market.league && <span className="badge badge-league" style={{marginBottom:6,display:"inline-block"}}>{LG(market,lang)}</span>}
+      {twoTeams ? <div className="match-teams" style={{marginBottom:0}}>
+        <div className="match-team"><div className="match-team-name">{H(market,lang)}</div></div>
+        <div className="match-vs">{t.markets.vs}</div>
+        <div className="match-team"><div className="match-team-name">{A(market,lang)}</div></div>
+      </div> : <div className="mkt-q" style={{margin:"4px 0 0"}}>{Q(market,lang)}</div>}
+    </div>
+
+    {/* Orderbook (Pro mode) */}
+    {mode==="pro" && <>
+      {obErr ? <div className="ob" style={{textAlign:"center",padding:20,color:"var(--t3)"}}><div style={{fontSize:24,marginBottom:6}}>📊</div>{t.trade.obError}</div>
+      : ob ? <div className="ob">
+        <div className="ob-hd"><div style={{textAlign:"right",paddingRight:8}}>{t.trade.bidVol}</div><div style={{textAlign:"center"}}>{t.trade.price}</div><div style={{paddingLeft:8}}>{t.trade.askVol}</div></div>
+        {(ob.asks||[]).slice(0,5).reverse().map((a,i)=><div key={`a${i}`} className="ob-row"><div className="ob-bar ob-bar-a" style={{width:`${a.size/maxS*48}%`}}/><div/><div className="ob-p rp">{a.price.toFixed(4)}</div><div className="ob-ask">{a.size>=1000?(a.size/1000).toFixed(1)+"K":a.size.toFixed(0)}</div></div>)}
+        <div className="ob-mid">{t.trade.spread}: {(ob.spread||0).toFixed(4)}  •  {t.trade.mid}: {(ob.mid_price||0).toFixed(4)}</div>
+        {(ob.bids||[]).slice(0,5).map((b,i)=><div key={`b${i}`} className="ob-row"><div className="ob-bar ob-bar-b" style={{width:`${b.size/maxS*48}%`}}/><div className="ob-bid">{b.size>=1000?(b.size/1000).toFixed(1)+"K":b.size.toFixed(0)}</div><div className="ob-p gp">{b.price.toFixed(4)}</div><div/></div>)}
+      </div> : <Loader t={t}/>}
+    </>}
+
+    {/* Outcome selection */}
+    <div className="fo-row">
+      <div className={`fo ${oc==="YES"?"sel-y":""}`} onClick={()=>setOc("YES")}>
+        {oc==="YES"&&<div className="sel-tag">{t.trade.selected}</div>}
+        <div className="fo-label" style={{color:"var(--g)"}}>{twoTeams?`${H(market,lang)} ${t.markets.win}`:t.markets.yes}</div>
+        <div className="fo-price" style={{color:"var(--g)"}}>{(yp*100).toFixed(0)}¢</div>
+        <div className="fo-sub">{(yp*100).toFixed(1)}%</div>
+      </div>
+      <div className={`fo ${oc==="NO"?"sel-n":""}`} onClick={()=>setOc("NO")}>
+        {oc==="NO"&&<div className="sel-tag">{t.trade.selected}</div>}
+        <div className="fo-label" style={{color:"var(--r)"}}>{twoTeams?`${A(market,lang)} ${t.markets.win}`:t.markets.no}</div>
+        <div className="fo-price" style={{color:"var(--r)"}}>{(np*100).toFixed(0)}¢</div>
+        <div className="fo-sub">{(np*100).toFixed(1)}%</div>
+      </div>
+    </div>
+
+    {/* Amount */}
+    <div className="amt-row">{presets.map(a=><button key={a} className={`amt-btn ${+sz===a?"a":""}`} onClick={()=>setSz(String(a))}>${a}</button>)}</div>
+    <div className="inp-wrap"><div className="inp-label"><span style={{color:"var(--gold)"}}>$</span></div><input className="inp" type="number" value={sz} onChange={e=>setSz(e.target.value)} style={{fontSize:20}}/></div>
+
+    {+sz>0&&shares>0&&<div className="summary">
+      <div className="sum-row"><span className="l">{t.trade.unitPrice}</span><span className="v">{pr.toFixed(4)} / {t.trade.shares}</span></div>
+      <div className="sum-row"><span className="l">{t.trade.shares}</span><span className="v">{shares} {t.trade.shares}</span></div>
+      <div className="sum-row"><span className="l">{t.trade.estPayout}</span><span className="v green">${shares.toFixed(2)}</span></div>
+      <div className="sum-row"><span className="l">{t.trade.estProfit}</span><span className="v" style={{color:profit>0?"var(--g)":"var(--t3)"}}>{profit>0?"+":""}${profit}</span></div>
+      <div className="sum-row sum-total"><span className="l" style={{color:"var(--t1)",fontWeight:700}}>{t.trade.total}</span><span className="v gold" style={{fontSize:20}}>${cost}</span></div>
+    </div>}
+
+    {/* DEMO ONLY button */}
+    <button className="btn btn-out" disabled style={{opacity:.5}}>🔒 {t.trade.demoOnly}</button>
+    <div className="hint">{lang==="zh"?"此 Demo 仅展示真实市场数据，不支持下单":"This demo shows live market data only. Trading is disabled."}</div>
+  </div>;
+};
+
+// ═══════════════════════════════════════
+// LEVERAGE — Demo only
+// ═══════════════════════════════════════
+const LeveragePage = ({t,lang,markets}) => {
+  const [mkt,setMkt]=useState(null);
+  const list = markets.length>0?markets:[];
+  const m = mkt || list[0];
+  if(!m) return <div className="page"><div className="page-hd"><div className="page-title hd">📐 {t.lev.title}</div></div><Loader t={t}/></div>;
+  const lev=3,yp=m.current_yes_price||0.5,margin=+(50*yp/lev).toFixed(2),fund=+(50*yp-margin).toFixed(2),liq=+(yp-0.11).toFixed(4),nom=+(50*yp).toFixed(2);
+  return <div className="page">
+    <div className="page-hd"><div className="page-title hd">📐 {t.lev.title}</div><div className="page-sub">{t.lev.subtitle}</div></div>
+    <div className="inp-wrap"><select className="inp" value={m.token_id} onChange={e=>{const f=list.find(x=>x.token_id===e.target.value);if(f)setMkt(f)}}>{list.map(x=><option key={x.token_id} value={x.token_id}>{Q(x,lang)}</option>)}</select></div>
+    <div className="stat-grid stat-grid-3">
+      <div className="stat-card"><div className="stat-label">{t.lev.leverage}</div><div className="stat-val gold">{lev}×</div></div>
+      <div className="stat-card"><div className="stat-label">{t.lev.margin}</div><div className="stat-val green">${margin}</div></div>
+      <div className="stat-card"><div className="stat-label">{t.lev.funding}</div><div className="stat-val blue">${fund}</div></div>
+    </div>
+    <div className="stat-grid stat-grid-2">
+      <div className="stat-card"><div className="stat-label">{t.lev.nominal}</div><div className="stat-val">${nom}</div></div>
+      <div className="stat-card"><div className="stat-label">{t.lev.liqPrice}</div><div className="stat-val red">{liq}</div></div>
+    </div>
+    <button className="btn btn-out" disabled style={{opacity:.5}}>🔒 {t.trade.demoOnly}</button>
+    <div className="warn">⚠️ {t.lev.warning}</div>
+  </div>;
+};
+
+// ═══════════════════════════════════════
+// POSITIONS — Placeholder
+// ═══════════════════════════════════════
+const PositionsPage = ({t}) => <div className="page">
+  <div className="page-hd"><div className="page-title hd">📊 {t.pos.title}</div></div>
+  <div className="tabs">{["pending","active","leveraged","settled"].map(k=><button key={k} className={`tab ${k==="active"?"a":""}`}>{t.pos[k]}</button>)}</div>
+  <div style={{textAlign:"center",padding:40,color:"var(--t3)"}}><div style={{fontSize:36,opacity:.3,marginBottom:8}}>📋</div>{t.pos.none}<div style={{fontSize:11,marginTop:8,color:"var(--t3)"}}>{t.trade.demoOnly}</div></div>
+</div>;
+
+// ═══════════════════════════════════════
+// ME — Placeholder
+// ═══════════════════════════════════════
+const MePage = ({t,lang}) => <div className="page">
+  <div className="page-hd"><div className="page-title hd">👤 {t.me.title}</div></div>
+  <div className="card card-neo">
+    <div style={{fontSize:12,color:"var(--t3)",marginBottom:4}}>{t.me.balance}</div>
+    <div className="mono" style={{fontSize:36,fontWeight:800,color:"var(--gold)"}}>—</div>
+    <div style={{display:"flex",gap:8,marginTop:14}}>
+      <button className="btn btn-out" disabled style={{flex:1,padding:10,fontSize:13,opacity:.5}}>🔒 {t.me.deposit}</button>
+      <button className="btn btn-out" disabled style={{flex:1,padding:10,fontSize:13,opacity:.5}}>🔒 {t.me.withdraw}</button>
+    </div>
+  </div>
+  <div className="hd" style={{fontSize:15,marginBottom:6}}>■ {t.me.history}</div>
+  <div style={{fontSize:12,color:"var(--t3)",marginBottom:12}}>{t.me.histSub}</div>
+  <div className="card card-sm"><span>{t.me.lang}</span></div>
+  <div className="card card-sm" style={{display:"flex",justifyContent:"space-between"}}><span>{t.me.about}</span><span className="mono" style={{color:"var(--t3)",fontSize:12}}>{t.me.version} 1.0.0-live</span></div>
+</div>;
+
+// ═══════════════════════════════════════
+// APP
+// ═══════════════════════════════════════
+function App() {
+  const [lang,setLang]=useState("zh");
+  const [pg,setPg]=useState("markets");
+  const [mode,setMode]=useState("fast");
+  const [mkt,setMkt]=useState(null);
+  const [allMarkets,setAllMarkets]=useState([]);
+  const t=T[lang];
+
+  // Keep a copy of markets for leverage page dropdown
+  useEffect(()=>{
+    fetch(`${API}/sports/markets?lang=${lang}&limit=30`)
+      .then(r=>r.json())
+      .then(d=>setAllMarkets(d.data||[]))
+      .catch(()=>{});
+  },[lang]);
+
+  const go=(p)=>{setPg(p);window.scrollTo({top:0,behavior:"smooth"})};
+  const onSelect=(m)=>{setMkt(m);setPg("trade");window.scrollTo({top:0,behavior:"smooth"})};
+
+  const tabs=[
+    {k:"markets",icon:Icons.markets,l:t.nav.markets},
+    {k:"leverage",icon:Icons.leverage,l:t.nav.leverage},
+    {k:"positions",icon:Icons.positions,l:t.nav.positions},
+    {k:"me",icon:Icons.me,l:t.nav.me},
+  ];
+
+  return <div className="app">
+    <style>{CSS}</style>
+    <div className="demo-banner">🟢 LIVE DATA · {lang==="zh"?"真实 Polymarket 数据":"Real Polymarket Data"}</div>
+    <div className="nav">
+      <div className="logo" style={{cursor:"pointer"}} onClick={()=>go("markets")}>⚡ JELLYBET</div>
+      <div style={{display:"flex",alignItems:"center",gap:8}}>
+        <span className="live-badge">LIVE</span>
+        <button onClick={()=>setLang(l=>l==="zh"?"en":"zh")} style={{background:"none",border:"2px solid var(--bdr)",color:"var(--t2)",padding:"4px 8px",cursor:"pointer",fontSize:12,fontWeight:700}}>
+          {lang==="zh"?"EN":"中"}
+        </button>
+      </div>
+    </div>
+    {pg==="markets"&&<MarketsPage t={t} lang={lang} onSelect={onSelect}/>}
+    {pg==="trade"&&mkt&&<TradePage t={t} lang={lang} market={mkt} mode={mode} setMode={setMode} onBack={()=>go("markets")}/>}
+    {pg==="leverage"&&<LeveragePage t={t} lang={lang} markets={allMarkets}/>}
+    {pg==="positions"&&<PositionsPage t={t}/>}
+    {pg==="me"&&<MePage t={t} lang={lang}/>}
+    <div className="tab-bar">
+      {tabs.map(tb=><button key={tb.k} className={`tab-item ${pg===tb.k||(pg==="trade"&&tb.k==="markets")?"active":""}`} onClick={()=>go(tb.k)}>
+        {tb.icon}<span>{tb.l}</span>
+      </button>)}
+    </div>
+  </div>;
+}
+
+ReactDOM.createRoot(document.getElementById('root')).render(React.createElement(App));
+</script>
+</body>
+</html>
