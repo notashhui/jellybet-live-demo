@@ -380,9 +380,11 @@ const TradePage = ({t,lang,market,mode,setMode,onBack}) => {
       {obErr ? <div className="ob" style={{textAlign:"center",padding:20,color:"var(--t3)"}}><div style={{fontSize:24,marginBottom:6}}>📊</div>{t.trade.obError}</div>
       : ob ? <div className="ob">
         <div className="ob-hd"><div style={{textAlign:"right",paddingRight:8}}>{t.trade.bidVol}</div><div style={{textAlign:"center"}}>{t.trade.price}</div><div style={{paddingLeft:8}}>{t.trade.askVol}</div></div>
-        {(ob.asks||[]).slice(0,5).reverse().map((a,i)=><div key={`a${i}`} className="ob-row"><div className="ob-bar ob-bar-a" style={{width:`${a.size/maxS*48}%`}}/><div/><div className="ob-p rp">{a.price.toFixed(4)}</div><div className="ob-ask">{a.size>=1000?(a.size/1000).toFixed(1)+"K":a.size.toFixed(0)}</div></div>)}
-        <div className="ob-mid">{t.trade.spread}: {(ob.spread||0).toFixed(4)}  •  {t.trade.mid}: {(ob.mid_price||0).toFixed(4)}</div>
-        {(ob.bids||[]).slice(0,5).map((b,i)=><div key={`b${i}`} className="ob-row"><div className="ob-bar ob-bar-b" style={{width:`${b.size/maxS*48}%`}}/><div className="ob-bid">{b.size>=1000?(b.size/1000).toFixed(1)+"K":b.size.toFixed(0)}</div><div className="ob-p gp">{b.price.toFixed(4)}</div><div/></div>)}
+        {(ob.asks||[]).length>0 ? (ob.asks||[]).slice(0,5).reverse().map((a,i)=><div key={`a${i}`} className="ob-row"><div className="ob-bar ob-bar-a" style={{width:`${a.size/maxS*48}%`}}/><div/><div className="ob-p rp">{a.price.toFixed(4)}</div><div className="ob-ask">{a.size>=1000?(a.size/1000).toFixed(1)+"K":a.size.toFixed(0)}</div></div>)
+        : <div style={{textAlign:"center",padding:"8px 0",color:"var(--t3)",fontSize:11}}>{lang==="zh"?"暂无卖盘":"No asks"}</div>}
+        <div className="ob-mid">{ob.spread>0 ? <>{t.trade.spread}: {ob.spread.toFixed(4)}  •  {t.trade.mid}: {(ob.mid_price||0).toFixed(4)}</> : <>{t.trade.bestBid}: {(ob.best_bid||0).toFixed(4)}  •  {t.trade.bestAsk}: {(ob.best_ask||0).toFixed(4)}</>}</div>
+        {(ob.bids||[]).length>0 ? (ob.bids||[]).slice(0,5).map((b,i)=><div key={`b${i}`} className="ob-row"><div className="ob-bar ob-bar-b" style={{width:`${b.size/maxS*48}%`}}/><div className="ob-bid">{b.size>=1000?(b.size/1000).toFixed(1)+"K":b.size.toFixed(0)}</div><div className="ob-p gp">{b.price.toFixed(4)}</div><div/></div>)
+        : <div style={{textAlign:"center",padding:"8px 0",color:"var(--t3)",fontSize:11}}>{lang==="zh"?"暂无买盘":"No bids"}</div>}
       </div> : <Loader t={t}/>}
     </>}
 
