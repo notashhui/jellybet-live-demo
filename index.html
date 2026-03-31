@@ -1,19 +1,23 @@
 <!DOCTYPE html>
 <html lang="zh">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no">
-<title>Jellybet — Live Sports Prediction Markets</title>
-<meta name="description" content="Jellybet API Demo — Live Polymarket Sports Data">
-<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>⚡</text></svg>">
-<script src="https://unpkg.com/react@18/umd/react.production.min.js" crossorigin></script>
-<script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js" crossorigin></script>
-<script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Kairos24 — Sports Prediction Markets</title>
+  <meta name="description" content="Kairos24 Live Demo — B2B2C Sports Prediction Market Platform">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>◆</text></svg>">
+  <style>
+    html, body { margin: 0; padding: 0; background: #0a0a0a; }
+    #root { min-height: 100vh; }
+  </style>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.9/babel.min.js"></script>
 </head>
 <body>
-<div id="root"></div>
-<script type="text/babel" data-type="module">
-const {useState, useEffect, useCallback, useMemo} = React;
+  <div id="root"></div>
+  <script type="text/babel">
+const { useState, useEffect, useCallback, useMemo } = React;
 
 
 // ═══════════════════════════════════════
@@ -32,7 +36,7 @@ const T = {
     trade: { buy:"买入", sell:"卖出", size:"金额 (USDC)", getQuote:"获取报价", submit:"提交订单", expires:"报价有效期", mktPrice:"市场价", quotedPrice:"报价", fee:"服务费", fok:"FOK 立即成交", gtc:"GTC 限价挂单", limitPrice:"限价", bestBid:"最优买价", bestAsk:"最优卖价", spread:"价差", mid:"中间价", bidVol:"买量(份)", price:"价格", askVol:"卖量(份)", success:"订单提交成功！", shares:"份", unitPrice:"报价单价", estPayout:"预计回报", estProfit:"预计利润", total:"总花费", instant:"即时成交 (FOK)", confirm:"确认并支付", outcome:"方向", cancel:"取消", again:"继续交易", selected:"已选", prob:"胜率", homeWin:"主胜", awayWin:"客胜", demoOnly:"仅供展示", obError:"订单簿暂不可用" },
     lev: { title:"杠杆交易", subtitle:"固定3倍杠杆 · 仅限买入", leverage:"杠杆倍数", margin:"所需保证金", funding:"借入金额", nominal:"名义金额", liqPrice:"强平价格", open:"开仓 (3X 杠杆)", warning:"杠杆交易有重大风险。当价格跌破强平阈值时，仓位将被自动平仓。", success:"杠杆仓位已开仓！" },
     pos: { title:"持仓管理", pending:"挂单中", active:"活跃", leveraged:"杠杆", settled:"已结算", none:"暂无记录", entry:"入场价", current:"当前价", pnl:"盈亏", limitPrice:"限价", cancelOrder:"撤单", waiting:"等待成交" },
-    me: { title:"我的", balance:"账户余额", deposit:"充值", withdraw:"提现", history:"交易记录", histSub:"连接真实 API 后显示", settings:"设置", lang:"语言切换", about:"关于 Jellybet", version:"版本" },
+    me: { title:"我的", balance:"账户余额", deposit:"充值", withdraw:"提现", history:"交易记录", histSub:"连接真实 API 后显示", settings:"设置", lang:"语言切换", about:"关于 Kairos24", version:"版本" },
     common: { back:"返回", noMatch:"暂无比赛" },
     live:"进行中"
   },
@@ -43,7 +47,7 @@ const T = {
     trade: { buy:"BUY", sell:"SELL", size:"Size (USDC)", getQuote:"Get Quote", submit:"Submit Order", expires:"Quote expires in", mktPrice:"Market Price", quotedPrice:"Quoted Price", fee:"Service Fee", fok:"⚡ FOK", gtc:"📖 GTC", limitPrice:"Limit Price", bestBid:"Best Bid", bestAsk:"Best Ask", spread:"Spread", mid:"Mid", bidVol:"Bid Size", price:"Price", askVol:"Ask Size", success:"Order Submitted!", shares:"shares", unitPrice:"Quoted Price", estPayout:"Est. Payout", estProfit:"Est. Profit", total:"Total Cost", instant:"Instant Execution (FOK)", confirm:"Confirm & Pay", outcome:"Outcome", cancel:"Cancel", again:"Trade Again", selected:"Selected", prob:"win rate", homeWin:"Home Win", awayWin:"Away Win", demoOnly:"Demo Only", obError:"Orderbook unavailable" },
     lev: { title:"Leverage Trading", subtitle:"3x Fixed Leverage · BUY Only", leverage:"Leverage", margin:"Required Margin", funding:"Borrowed", nominal:"Nominal Value", liqPrice:"Liquidation Price", open:"Open Position (3X)", warning:"Leverage trading carries significant risk. Positions will be liquidated if price drops below the liquidation threshold.", success:"Position opened!" },
     pos: { title:"Positions", pending:"Pending", active:"Active", leveraged:"Leveraged", settled:"Settled", none:"No records", entry:"Entry", current:"Current", pnl:"P&L", limitPrice:"Limit Price", cancelOrder:"Cancel", waiting:"Waiting" },
-    me: { title:"Me", balance:"Account Balance", deposit:"Deposit", withdraw:"Withdraw", history:"Trade History", histSub:"Will show after connecting live API", settings:"Settings", lang:"Language", about:"About Jellybet", version:"Version" },
+    me: { title:"Me", balance:"Account Balance", deposit:"Deposit", withdraw:"Withdraw", history:"Trade History", histSub:"Will show after connecting live API", settings:"Settings", lang:"Language", about:"About Kairos24", version:"Version" },
     common: { back:"Back", noMatch:"No matches" },
     live:"LIVE"
   }
@@ -509,7 +513,7 @@ function App() {
     <style>{CSS}</style>
     <div className="demo-banner">🟢 LIVE DATA · {lang==="zh"?"真实 Polymarket 数据":"Real Polymarket Data"}</div>
     <div className="nav">
-      <div className="logo" style={{cursor:"pointer"}} onClick={()=>go("markets")}>⚡ JELLYBET</div>
+      <div className="logo" style={{cursor:"pointer"}} onClick={()=>go("markets")}>◆ KAIROS24</div>
       <div style={{display:"flex",alignItems:"center",gap:8}}>
         <span className="live-badge">LIVE</span>
         <button onClick={()=>setLang(l=>l==="zh"?"en":"zh")} style={{background:"none",border:"2px solid var(--bdr)",color:"var(--t2)",padding:"4px 8px",cursor:"pointer",fontSize:12,fontWeight:700}}>
@@ -530,7 +534,8 @@ function App() {
   </div>;
 }
 
-ReactDOM.createRoot(document.getElementById('root')).render(React.createElement(App));
-</script>
+
+ReactDOM.createRoot(document.getElementById('root')).render(<App />);
+  </script>
 </body>
 </html>
